@@ -6,6 +6,8 @@ import Search from "./Header/Search";
 import NumResults from "./Header/NumResults";
 import ListBox from "./Body/ListBox";
 import WatchedBox from "./Body/WatchedBox";
+import Loader from "./Body/Loader";
+import ErrorMessage from "./Body/ErrorMessage";
 const tempMovieData = [
   {
     imdbID: "tt1375666",
@@ -34,17 +36,52 @@ const KEY = "6817df2b";
 
 export default function App() {
   const [movies, setMovies] = useState(tempMovieData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(function () {
-    fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=batman`)
-      .then((res) => res.json())
-      .then((data) => console.log(data.Search));
-  }, []);
+  //Note: click ctrl + / to uncomment a block of code
+
+  // useEffect without async await
+  //  useEffect(function () {
+  //   fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=batman`)
+  //     .then((res) => res.json())
+  //     .then((data) => console.log(data.Search));
+  // }, []);
 
   //This method caused side effect
   // fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=batman`)
   //   .then((res) => res.json())
   //   .then((data) => console.log(data.Search));
+
+  // useEffect with async await
+  const query = "spiderman";
+  useEffect(function () {
+    async function fetchMovies() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+        );
+        //So, res.ok is a Boolean property that simplifies the process of checking whether an HTTP response was successful or not based on the status code.
+        if (!res.ok) {
+          throw new Error("Something went wrong with fetching movies");
+        }
+
+        const data = await res.json();
+        if (data.Response === "False") {
+          throw new Error("Movies not found");
+        }
+        setMovies(data.Search);
+        console.log(data);
+        //setting state is asynchronous
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchMovies();
+  }, []);
 
   return (
     <>
@@ -54,7 +91,9 @@ export default function App() {
         <NumResults movies={movies} />
       </NavBar>
       <Main>
-        <ListBox movies={movies} />
+        {isLoading && <Loader />}
+        {!isLoading && !error && <ListBox movies={movies} />}
+        {error && <ErrorMessage message={error} />}
         <WatchedBox />
       </Main>
     </>
